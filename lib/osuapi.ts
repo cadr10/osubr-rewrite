@@ -52,6 +52,13 @@ export async function getOsuToken() {
     
     const user = data.related_users.find((user: any) => user.id === data.user_id);
     
+    const modeMap: { [key: string]: number } = {
+    'osu': 0,
+    'taiko': 1,
+    'fruits': 2,
+    'mania': 3
+    };
+
     return {
       id: data.id,
       title: data.title,
@@ -61,7 +68,10 @@ export async function getOsuToken() {
       username: user ? user.username : null,
       bpm: data.bpm,
       status: data.status,
-      diffs: data.beatmaps.map((bm: any) => ({ mode: bm.mode, stars: bm.difficulty_rating })),
+      diffs: data.beatmaps.map((bm: any) => ({ 
+        mode: modeMap[bm.mode] ?? -1,
+        stars: bm.difficulty_rating 
+    })),
       last_updated: data.last_updated,
       thumbnail: data.covers.card,
       nsfw: data.nsfw,
