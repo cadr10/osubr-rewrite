@@ -6,14 +6,17 @@ declare module 'next-auth' {
     user: {
       id: string;
       isAdmin?: boolean;
+      isBanned: boolean; 
       osu_id?: float;
-      name: string; // Adiciona a propriedade isAdmin à interface User
+      name: string;
+      image?: string;
     };
   }
 
   interface User {
     id: string;
-    isAdmin?: boolean; 
+    isAdmin?: boolean;
+    isBanned: boolean; 
     name: string;
   }
 }

@@ -37,6 +37,24 @@ model Song {
   genres       String[]
 }
 
+model DeletedSong {
+  uuid         String   @id @default(auto()) @map("_id") @db.ObjectId
+  id           Int      @unique
+  title        String?
+  artist       String?
+  bpm          Float?
+  status       String?
+  user_id      Int?
+  creator      String?
+  username     String?
+  diffs        Json?
+  last_updated String?
+  thumbnail    String?
+  nsfw         Boolean?
+  tags         String?
+  genres       String[]
+}
+
 
 model User {
   createdAt     DateTime  @default(now())
@@ -49,6 +67,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   isAdmin       Boolean   @default(false)
+  isBanned      Boolean   @default(false)
   osu_id        String?    
   Outsong       Outsong[]
 }

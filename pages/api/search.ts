@@ -1,11 +1,14 @@
+// a/pages/api/search.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '../../lib/prisma';
-import { SongProps } from "../../components/Song";
+import { Song as SongProps } from "../../components/Song";
 
 export default async function handle(req: NextApiRequest, res: NextApiResponse) {
-  const { q, mode, genres, nsfw, page = 1, limit = 10 } = req.query;
-  let starMin: number | undefined;
-  let starMax: number | undefined;
+  const { q, mode, genres, nsfw, page = 1, limit = 10, star_min, star_max } = req.query;
+
+  let starMin: number | undefined = star_min ? parseFloat(star_min as string) : undefined;
+  let starMax: number | undefined = star_max && parseFloat(star_max as string) < 12 ? parseFloat(star_max as string) : undefined;
+  
   let starExact: number | undefined;
   const whereClause: any = {};
 
@@ -27,10 +30,12 @@ export default async function handle(req: NextApiRequest, res: NextApiResponse) 
         }
       } else if (part.includes('>')) {
         const [key, value] = part.split('>');
-        if (key === 'star') starMin = parseFloat(value);
+
+        if (key === 'star' && starMin === undefined) starMin = parseFloat(value);
       } else if (part.includes('<')) {
         const [key, value] = part.split('<');
-        if (key === 'star') starMax = parseFloat(value);
+ 
+        if (key === 'star' && starMax === undefined) starMax = parseFloat(value);
       } else {
         freeTextQueries.push(part);
       }
@@ -81,20 +86,16 @@ export default async function handle(req: NextApiRequest, res: NextApiResponse) 
       },
     });
 
-    // Transform the data to match SongProps
     const transformedSongs: SongProps[] = dbSongs.map(song => {
-      // Parse the diffs JSON if it's a string or ensure it's the correct format
       const parsedDiffs = Array.isArray(song.diffs) 
         ? song.diffs 
         : (typeof song.diffs === 'string' ? JSON.parse(song.diffs) : []);
       
-      // Make sure each diff has mode and stars properties
       const typedDiffs = parsedDiffs.map((diff: any) => ({
         mode: typeof diff.mode === 'number' ? diff.mode : 0,
         stars: typeof diff.stars === 'number' ? diff.stars : 0,
       }));
 
-      // Convert genres array to string (comma-separated) if needed
       const genresString = Array.isArray(song.genres) 
         ? song.genres.join(',') 
         : (typeof song.genres === 'string' ? song.genres : '');

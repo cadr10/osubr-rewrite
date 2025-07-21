@@ -1,86 +1,112 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Song } from './Song';
+
+export const useAudioPlayer = () => {
+  const [currentSong, setCurrentSong] = useState<Song | null>(null);
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+
+  const handleSongClick = useCallback((song: Song) => {
+    if (currentSong?.id === song.id) {
+      if (audio) {
+        isPlaying ? audio.pause() : audio.play();
+        setIsPlaying(!isPlaying);
+      }
+    } else {
+      audio?.pause();
+      const newAudio = new Audio(`https://b.ppy.sh/preview/${song.id}.mp3`);
+      newAudio.volume = 0.5;
+      newAudio.play().catch(e => console.error("Audio play failed:", e));
+
+      newAudio.onplay = () => setIsPlaying(true);
+      newAudio.onpause = () => setIsPlaying(false);
+      newAudio.onended = () => {
+        setIsPlaying(false);
+        setCurrentSong(null);
+      };
+
+      setAudio(newAudio);
+      setCurrentSong(song);
+    }
+  }, [audio, currentSong, isPlaying]);
+
+  const handleTogglePlayPause = useCallback(() => {
+    if (audio) {
+      isPlaying ? audio.pause() : audio.play();
+      setIsPlaying(!isPlaying);
+    }
+  }, [audio, isPlaying]);
+
+  useEffect(() => {
+    return () => {
+      audio?.pause();
+    };
+  }, [audio]);
+
+  return { currentSong, isPlaying, handleSongClick, handleTogglePlayPause, audio };
+};
 
 type PlayerProps = {
-  songId: number | null;
-  title: string | null;
-  artist: string | null;
+  song: Song | null;
   audio: HTMLAudioElement | null;
   isPlaying: boolean;
   onTogglePlayPause: () => void;
-  onEnded: () => void;
 };
 
-const Player: React.FC<PlayerProps> = ({ songId, title, artist, audio, isPlaying, onTogglePlayPause, onEnded }) => {
-  const [progress, setProgress] = useState<number>(0);
+const Player: React.FC<PlayerProps> = ({ song, audio, isPlaying, onTogglePlayPause }) => {
+  const [progress, setProgress] = useState(0);
+  const progressBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (audio) {
-      audio.ontimeupdate = () => {
+    const updateProgress = () => {
+      if (audio) {
         setProgress((audio.currentTime / audio.duration) * 100);
-      };
+      }
+    };
 
-      audio.onended = () => {
-        onEnded();
+    if (audio) {
+      audio.addEventListener('timeupdate', updateProgress);
+      return () => {
+        audio.removeEventListener('timeupdate', updateProgress);
       };
     }
-  }, [audio, onEnded]);
+  }, [audio]);
+
+  const handleSeek = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (progressBarRef.current && audio) {
+      const bar = progressBarRef.current;
+      const rect = bar.getBoundingClientRect();
+      const seekPosition = (event.clientX - rect.left) / rect.width;
+      audio.currentTime = seekPosition * audio.duration;
+    }
+  };
+
+  if (!song || !audio) {
+    return null;
+  }
+
+  const isPlayerHidden = !song;
 
   return (
-    <div className="previewPlayer">
-      <div className="thumbnail" style={{ backgroundImage: `url(https://b.ppy.sh/thumb/${songId}l.jpg)` }}>
-        <button onClick={onTogglePlayPause}>
-          <i className={`fa ${isPlaying ? 'fa-pause' : 'fa-play'}`} />
-        </button>
-      </div>
-      <div className="info">
-        <div id="previewPlayerTitle">{decodeURI(title || '')}</div>
-        <div id="previewPlayerArtist">{decodeURI(artist || '')}</div>
-        <div className="progressBar">
-          <div id="seekFill" style={{ width: `${progress}%` }} />
+    <div className={`previewPlayer ${isPlayerHidden ? 'hidden' : ''}`}>
+      <div className="metadataContainer">
+        <div
+          className="thumbnail"
+          style={{ backgroundImage: `url(https://assets.ppy.sh/beatmaps/${song.id}/covers/list.jpg)` }}
+        ></div>
+        <div className="metadata">
+          <div className="title">{song.title}</div>
+          <div className="artist">{song.artist}</div>
         </div>
       </div>
-      <style jsx>{`
-        .previewPlayer {
-          display: flex;
-          background: rgba(255, 255, 255, 0.9);
-          padding: 10px;
-          border-radius: 8px;
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-          position: fixed;
-          bottom: 20px;
-          left: 20px;
-          width: 300px;
-          align-items: center;
-        }
-        .thumbnail {
-          width: 60px;
-          height: 60px;
-          background-size: cover;
-          border-radius: 4px;
-          margin-right: 10px;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        .info {
-          flex: 1;
-        }
-        .progressBar {
-          background: #ddd;
-          height: 5px;
-          border-radius: 2px;
-          overflow: hidden;
-          margin-top: 8px;
-        }
-        #seekFill {
-          background: #4caf50;
-          height: 100%;
-        }
-        #stateButton {
-          font-size: 24px;
-          color: #333;
-        }
-      `}</style>
+      <div className="controls">
+        <div className="state" onClick={onTogglePlayPause}>
+          <i className={`fas ${isPlaying ? 'fa-pause' : 'fa-play'}`}></i>
+        </div>
+        <div className="seek" ref={progressBarRef} onClick={handleSeek}>
+          <div className="seekFill" style={{ width: `${progress}%` }}></div>
+        </div>
+      </div>
     </div>
   );
 };

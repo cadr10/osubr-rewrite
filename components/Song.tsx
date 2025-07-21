@@ -1,62 +1,79 @@
-import React from "react";
+import React from 'react';
 import DifficultyIcon from './DifficultyIcon';
 
-export type SongProps = {
+export interface Song {
   id: number;
   title: string;
   artist: string;
-  bpm: GLfloat;
-  status: string;
-  user_id: number;
-  creator: string;
-  username: string;
-  diffs: Array<{ mode: number; stars: number; }>;
-  last_updated: string;
-  thumbnail: string;
-  nsfw: boolean;
-  tags: string;
-  genres: string;
-  uuid: String;
+  creator?: string;
+  username?: string;
+  user_id?: number;
+  bpm?: number;
+  status?: string;
+  last_updated?: string;
+  thumbnail?: string;
+  nsfw?: boolean;
+  tags?: string;
+  genres: string[] | string;
+  diffs?: { mode: number; stars: number }[];
+  uuid?: string;
+}
+
+interface Props {
+  song: Song;
+  isPlaying: boolean;
+  onClick: () => void;
+}
+
+const Difficulty = ({ mode, stars }: { mode: number, stars: number }) => {
+  return <DifficultyIcon diff={{ mode, stars }} small={true} />; // Pass the small prop
 };
 
-const Difficulty = ({ mode, stars }) => {
-  const svgElement = new DifficultyIcon(mode, stars).getSVG();
-  return svgElement;
-};
+const Song: React.FC<Props> = ({ song, isPlaying, onClick }) => {
+  const coverUrl = `https://assets.ppy.sh/beatmaps/${song.id}/covers/list.jpg`;
+  const beatmapUrl = `https://osu.ppy.sh/beatmapsets/${song.id}`;
+  const userUrl = `https://osu.ppy.sh/users/${song.user_id}`;
 
-const Song: React.FC<{ song: SongProps; isPlaying: boolean; onClick: () => void; }> = ({ song, isPlaying, onClick }) => {
+  const stopPropagation = (e: React.MouseEvent) => e.stopPropagation();
+
+  const handleDownload = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(`osu://s/${song.id}`);
+  };
+
   return (
     <div className="song">
       <div className="hoverSideOptions">
         <i
           className="fa-solid fa-download"
-          onClick={(e) => {
-            e.stopPropagation();
-            window.open(`osu://s/${song.id}`);
-          }}
+          onClick={handleDownload}
+          title="Download with osu!direct"
         ></i>
       </div>
 
       <div className="thumbnail" onClick={onClick}>
-        <img src={song.thumbnail} alt={`Thumbnail for ${song.title}`} />
+        <img
+          src={coverUrl}
+          alt={`${song.title} cover`}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = '/nothumb.jpg';
+          }}
+        />
         <div className="previewButton">
           <i className={`fa-solid fa-${isPlaying ? 'pause' : 'play'}`}></i>
         </div>
       </div>
 
-      <a className="title" href={`https://osu.ppy.sh/beatmapsets/${song.id}`} target="_blank" rel="noopener noreferrer">
+      <a className="title" href={beatmapUrl} target="_blank" rel="noopener noreferrer" onClick={stopPropagation} title={song.title}>
         {song.title}
       </a>
-
       <div className="artist">{song.artist}</div>
-
-      <a className="creator" href={`https://osu.ppy.sh/users/${song.user_id}`} target="_blank" rel="noopener noreferrer">
-        {song.username}</a>
-
+      <a className="creator" href={userUrl} target="_blank" rel="noopener noreferrer" onClick={stopPropagation}>
+        {song.username}
+      </a>
       <div className="difficulties">
-        {song.diffs
-          .sort((a, b) => a.stars - b.stars)
-          .sort((a, b) => a.mode - b.mode)
+        {Array.isArray(song.diffs) && song.diffs
+          .sort((a, b) => a.mode - b.mode || a.stars - b.stars)
           .map((diff, index) => (
             <Difficulty key={index} mode={diff.mode} stars={diff.stars} />
           ))}

@@ -12,28 +12,31 @@ export default async function handle(
   const session = await getServerSession(req, res, options);
   if (session && session.user) {
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id }, // Assumindo que session.user.id é o ID do usuário
-    });
-
-    if (!user) {
-      res.status(401).json({ message: 'User not found' });
-      return;
+    if (session.user.isBanned) {
+        return res.status(403).json({ message: 'Você está banido e não pode enviar músicas.' });
     }
 
-    // Obter o providerAccountId associado ao usuário
+    const providerAccountId = session.user.id;
+
     const account = await prisma.account.findFirst({
-      where: { userId: user.id },
+      where: { providerAccountId: providerAccountId },
     });
 
     if (!account) {
-      res.status(401).json({ message: 'Account not found' });
+      res.status(401).json({ message: 'User account not found' });
       return;
     }
 
-    const providerAccountId = account.providerAccountId;
+    const user = await prisma.user.findUnique({
+        where: { id: account.userId },
+    });
 
-    // Verificar se o ID já existe em Songs ou OutSong
+    if (!user) {
+        res.status(401).json({ message: 'User not found' });
+        return;
+    }
+
+
     const existingSong = await prisma.song.findUnique({
       where: { id: Number(id) },
     });
@@ -42,20 +45,23 @@ export default async function handle(
       where: { id: Number(id) },
     });
 
-    if (existingSong || existingOutsong) {
-      // ID já existe, informar o usuário e não fazer nada
+    const existingDeletedSong = await prisma.deletedSong.findUnique({
+        where: { id: Number(id) },
+    });
+
+    if (existingSong || existingOutsong || existingDeletedSong) {
+
       res.status(409).json({ message: 'A música já está na lista ou vai ser adicionada em breve!' });
       return;
     }
 
-    // Se o ID não existe, criar o novo registro
     const result = await prisma.outsong.create({
       data: {
         id: Number(id),
         user_id: account.providerAccountId,
         genres: genres,
         author: {
-          connect: { id: user.id } // Conectando o usuário pelo ID
+          connect: { id: user.id } 
         },
       },
     });
