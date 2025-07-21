@@ -13,7 +13,7 @@ type EditGenresPageProps = {
     songs: Song[];
 };
 
-type SortKey = keyof Omit<Song, 'genres' | 'diffs' | 'tags' | 'thumbnail' | 'last_updated' | 'status' | 'bpm' | 'user_id' | 'username' | 'nsfw' | 'uuid'>;
+type SortKey = keyof Omit<Song, 'genres' | 'diffs' | 'tags' | 'thumbnail' | 'last_updated' | 'status' | 'bpm' | 'user_id' | 'creator' | 'nsfw' | 'uuid'>;
 
 
 type SortConfig = {
@@ -130,8 +130,8 @@ const EditGenresPage: React.FC<EditGenresPageProps> = ({ songs: initialSongs }) 
                                 <th onClick={() => requestSort('artist')} className="sortable-header" style={{ width: '20%' }}>
                                     Artista {getSortArrow('artist')}
                                 </th>
-                                <th onClick={() => requestSort('creator')} className="sortable-header" style={{ width: '20%' }}>
-                                    Creator {getSortArrow('creator')}
+                                <th onClick={() => requestSort('username')} className="sortable-header" style={{ width: '20%' }}>
+                                    Creator {getSortArrow('username')}
                                 </th>
                                 <th style={{ width: '20%' }}>Gêneros (separados por vírgula)</th>
                             </tr>
@@ -151,7 +151,7 @@ const EditGenresPage: React.FC<EditGenresPageProps> = ({ songs: initialSongs }) 
                                         </a>
                                     </td>
                                     <td title={song.artist}>{song.artist}</td>
-                                    <td title={song.creator}>{song.creator}</td>
+                                    <td title={song.username}>{song.username}</td>
                                     <td>
                                         <input
                                             type="text"
@@ -318,7 +318,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             id: true,
             title: true,
             artist: true,
-            creator: true,
+            username: true,
             genres: true,
         },
         orderBy: {
@@ -332,7 +332,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 ...song,
                 title: song.title || '',
                 artist: song.artist || '',
-                creator: song.creator || '',
+                username: song.username || '',
                 genres: Array.isArray(song.genres) ? song.genres : (song.genres ? [song.genres] : []),
             })),
         },
